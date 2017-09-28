@@ -47,9 +47,11 @@ class ElevatorLogic(object):
         # compare next request on the queue with the requested and determine if it should be ignored
         if len(self.queue) != 0: 
             next_in_queue = self.queue[0]
-            if next_in_queue["floor"] < floor:
+            if floor > next_in_queue["floor"]:
                 self.queue.append({ "floor": floor, "direction": 0 })
-            # Otherwise ignore the 
+        else:
+            self.queue.append({ "floor": floor, "direction": 0 })
+                 
 
     def on_floor_changed(self):
         """
@@ -59,11 +61,9 @@ class ElevatorLogic(object):
         current_floor = self.callbacks.current_floor
         current_direction = self.callbacks.motor_direction
         for request in self.queue:
-            requested_floor = request["floor"]
-            requested_direction = request["direction"]
-            if current_floor == requested_floor and \
-                (requested_direction == current_direction or \
-                requested_direction == 0):
+            # if request["floor"] == current_floor:
+            should_stop = self.elevator_should_stop(request)
+            if should_stop:
                 self.queue.remove(request)
                 self.callbacks.motor_direction = None
 
@@ -82,4 +82,18 @@ class ElevatorLogic(object):
             self.callbacks.motor_direction = UP
         elif destination["floor"] < self.callbacks.current_floor:
             self.callbacks.motor_direction = DOWN
+
+    def elevator_should_stop(self, request):
+        requested_floor = request["floor"]
+        requested_direction = request["direction"]
+
+        destination_reached = requested_floor == self.callbacks.current_floor
+        is_same_direction = requested_direction == self.callbacks.motor_direction
+        is_stop_request = requested_direction == 0
+        final_floor = requested_floor == FLOOR_COUNT - 1;
+
+        return destination_reached and ((is_same_direction or is_stop_request) or final_floor)
+
+
+
 
