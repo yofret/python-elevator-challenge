@@ -32,8 +32,8 @@ class ElevatorLogic(object):
         direction: the direction the caller wants to go, up or down
         """
         self.destination_floor = floor
-        # Appending to the queue when someone calls the elevator in a specific floor
-        self.queue.append(self.destination_floor)
+        # Append an Object containing the request and direction
+        self.queue.append({ "floor": floor, "direction": direction })
 
     def on_floor_selected(self, floor):
         """
@@ -43,22 +43,29 @@ class ElevatorLogic(object):
 
         floor: the floor that was requested
         """
-        self.destination_floor = floor
-        # Appending to the queue when someone selects a floor on the elevator
-        self.queue.append(self.destination_floor)
+        # Append an Object containing the request and direction will be nothing
+        # compare next request on the queue with the requested and determine if it should be ignored
+        if len(self.queue) != 0: 
+            next_in_queue = self.queue[0]
+            if next_in_queue["floor"] < floor:
+                self.queue.append({ "floor": floor, "direction": 0 })
+            # Otherwise ignore the 
 
     def on_floor_changed(self):
         """
         This lets you know that the elevator has moved one floor up or down.
         You should decide whether or not you want to stop the elevator.
         """
-        # if self.destination_floor == self.callbacks.current_floor:
-        #     self.callbacks.motor_direction = None
         current_floor = self.callbacks.current_floor
-        if current_floor in self.queue:
-            # remove floor from queue
-            self.queue.remove(current_floor)
-            self.callbacks.motor_direction = None
+        current_direction = self.callbacks.motor_direction
+        for request in self.queue:
+            requested_floor = request["floor"]
+            requested_direction = request["direction"]
+            if current_floor == requested_floor and \
+                (requested_direction == current_direction or \
+                requested_direction == 0):
+                self.queue.remove(request)
+                self.callbacks.motor_direction = None
 
     def on_ready(self):
         """
@@ -67,8 +74,12 @@ class ElevatorLogic(object):
         time to actually move, if necessary.
         """
         # get the first floor in the queue and keep moving on that direction
+        if len(self.queue) == 0:
+            return
+
         destination = self.queue[0]
-        if destination > self.callbacks.current_floor:
+        if destination["floor"] > self.callbacks.current_floor:
             self.callbacks.motor_direction = UP
-        elif destination < self.callbacks.current_floor:
+        elif destination["floor"] < self.callbacks.current_floor:
             self.callbacks.motor_direction = DOWN
+
