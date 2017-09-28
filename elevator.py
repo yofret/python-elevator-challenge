@@ -20,6 +20,7 @@ class ElevatorLogic(object):
         # Feel free to add any instance variables you want.
         self.destination_floor = None
         self.callbacks = None
+        self.queue = [] # adding a queue to handle more than 1 request
 
     def on_called(self, floor, direction):
         """
@@ -31,6 +32,8 @@ class ElevatorLogic(object):
         direction: the direction the caller wants to go, up or down
         """
         self.destination_floor = floor
+        # Appending to the queue when someone calls the elevator in a specific floor
+        self.queue.append(self.destination_floor)
 
     def on_floor_selected(self, floor):
         """
@@ -41,13 +44,20 @@ class ElevatorLogic(object):
         floor: the floor that was requested
         """
         self.destination_floor = floor
+        # Appending to the queue when someone selects a floor on the elevator
+        self.queue.append(self.destination_floor)
 
     def on_floor_changed(self):
         """
         This lets you know that the elevator has moved one floor up or down.
         You should decide whether or not you want to stop the elevator.
         """
-        if self.destination_floor == self.callbacks.current_floor:
+        # if self.destination_floor == self.callbacks.current_floor:
+        #     self.callbacks.motor_direction = None
+        current_floor = self.callbacks.current_floor
+        if current_floor in self.queue:
+            # remove floor from queue
+            self.queue.remove(current_floor)
             self.callbacks.motor_direction = None
 
     def on_ready(self):
@@ -56,7 +66,9 @@ class ElevatorLogic(object):
         Maybe passengers have embarked and disembarked. The doors are closed,
         time to actually move, if necessary.
         """
-        if self.destination_floor > self.callbacks.current_floor:
+        # get the first floor in the queue and keep moving on that direction
+        destination = self.queue[0]
+        if destination > self.callbacks.current_floor:
             self.callbacks.motor_direction = UP
-        elif self.destination_floor < self.callbacks.current_floor:
+        elif destination < self.callbacks.current_floor:
             self.callbacks.motor_direction = DOWN
