@@ -34,6 +34,7 @@ class ElevatorLogic(object):
         """
         # Append an Object containing the request and direction
         self.queue.append({ "floor": floor, "direction": direction })
+        # print(self.queue, self.last_direction)
 
     def on_floor_selected(self, floor):
         """
@@ -48,7 +49,10 @@ class ElevatorLogic(object):
         # compare next request on the queue with the requested and determine if it should be ignored
         
         # Ignore all request in opposite direction
-        if floor < self.callbacks.current_floor and self.last_direction == UP or floor > self.callbacks.current_floor and self.last_direction == DOWN:
+        # print(self.callbacks.current_floor, self.last_direction, floor)
+        if floor < self.callbacks.current_floor and self.last_direction == UP or \
+        floor > self.callbacks.current_floor and self.last_direction == DOWN or \
+        floor == self.callbacks.current_floor:
              return
             
         self.queue.insert(0,{ "floor": floor, "direction": 0 })
@@ -105,7 +109,10 @@ class ElevatorLogic(object):
         destination_reached = requested_floor == self.callbacks.current_floor
         is_same_direction = requested_direction == self.callbacks.motor_direction
         is_stop_request = requested_direction == 0
-        final_floor = requested_floor == FLOOR_COUNT - 1;
+        is_edge = self.is_edge_floor();
 
-        return destination_reached and ((is_same_direction or is_stop_request) or final_floor)
+        return destination_reached and ((is_same_direction or is_stop_request) or self.is_edge_floor())
 
+    def is_edge_floor(self):
+        if self.callbacks.current_floor == FLOOR_COUNT or self.callbacks.current_floor == 1:
+            return True
