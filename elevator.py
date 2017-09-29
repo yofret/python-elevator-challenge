@@ -21,6 +21,7 @@ class ElevatorLogic(object):
         self.destination_floor = None
         self.callbacks = None
         self.queue = [] # adding a queue to handle more than 1 request
+        self.last_direction = None
 
     def on_called(self, floor, direction):
         """
@@ -31,7 +32,6 @@ class ElevatorLogic(object):
         floor: the floor that the elevator is being called to
         direction: the direction the caller wants to go, up or down
         """
-        self.destination_floor = floor
         # Append an Object containing the request and direction
         self.queue.append({ "floor": floor, "direction": direction })
 
@@ -43,15 +43,16 @@ class ElevatorLogic(object):
 
         floor: the floor that was requested
         """
+        
         # Append an Object containing the request and direction will be nothing
         # compare next request on the queue with the requested and determine if it should be ignored
-        if len(self.queue) != 0: 
-            next_in_queue = self.queue[0]
-            if floor > next_in_queue["floor"]:
-                self.queue.append({ "floor": floor, "direction": 0 })
-        else:
-            self.queue.append({ "floor": floor, "direction": 0 })
-                 
+        
+        # Ignore all request in opposite direction
+        if floor < self.callbacks.current_floor and self.last_direction == UP or floor > self.callbacks.current_floor and self.last_direction == DOWN:
+             return
+            
+        self.queue.insert(0,{ "floor": floor, "direction": 0 })
+        # print(self.queue, self.last_direction)
 
     def on_floor_changed(self):
         """
@@ -66,6 +67,9 @@ class ElevatorLogic(object):
             if should_stop:
                 self.queue.remove(request)
                 self.callbacks.motor_direction = None
+                # If there is no more floors put direction to none
+                if len(self.queue) == 0:
+                    self.last_direction = None
 
     def on_ready(self):
         """
@@ -75,13 +79,24 @@ class ElevatorLogic(object):
         """
         # get the first floor in the queue and keep moving on that direction
         if len(self.queue) == 0:
+            self.last_direction = None
             return
 
         destination = self.queue[0]
         if destination["floor"] > self.callbacks.current_floor:
             self.callbacks.motor_direction = UP
+            self.last_direction = UP
         elif destination["floor"] < self.callbacks.current_floor:
             self.callbacks.motor_direction = DOWN
+            self.last_direction = DOWN
+        else:
+            # Inverse direction
+            if self.last_direction == UP:
+                self.last_direction = DOWN
+            elif self.last_direction == DOWN:
+                self.last_direction = UP
+            else:
+                self.last_direction = None
 
     def elevator_should_stop(self, request):
         requested_floor = request["floor"]
@@ -93,7 +108,4 @@ class ElevatorLogic(object):
         final_floor = requested_floor == FLOOR_COUNT - 1;
 
         return destination_reached and ((is_same_direction or is_stop_request) or final_floor)
-
-
-
 
