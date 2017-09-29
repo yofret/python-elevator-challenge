@@ -140,8 +140,7 @@ Even though the first floor was selected first, the elevator services the call a
 ### Directionality
 
 Elevators want to keep going in the same direction. An elevator will serve as many requests in one direction as it can before going the other way. For example, if an elevator is going up, it won't stop to pick up passengers who want to go down until it's done with everything that requires it to go up.
-    
-    >>> changing_direction = "### Directionality"
+
     >>> e = Elevator(ElevatorLogic())
     1...
     >>> e.call(2, DOWN)
@@ -182,8 +181,7 @@ Now it's done going up, so you can select the second floor.
 ### Changing direction
 
 The process of switching directions is a bit tricky. Normally, if an elevator going up stops at a floor and there are no more requests at higher floors, the elevator is free to switch directions right away. However, if the elevator was called to that floor by a user indicating that she wants to go up, the elevator is bound to consider itself going up.
-    
-    >>> changing_direction = "### Changing direction"
+
     >>> e = Elevator(ElevatorLogic())
     1...
     >>> e.call(2, DOWN)
@@ -232,4 +230,40 @@ Since nothing caused the elevator to move down, the elevator now considers itsel
     >>> e.select_floor(6)
     >>> e.run_until_stopped()
     6...
+
+### En passant
+
+Keep in mind that a user could call the elevator or select a floor at any time. The elevator need not be stopped. If the elevator is called or a floor is selected before it has reached the floor in question, then the request should be serviced.
+
+    >>> e = Elevator(ElevatorLogic())
+    1...
+    >>> e.select_floor(6)
+    >>> e.run_until_floor(2)  # elevator is not stopped
+    2...
+    >>> e.select_floor(3)
+    >>> e.run_until_stopped()  # stops for above
+    3...
+    >>> e.run_until_floor(4)
+    4...
+    >>> e.call(5, UP)
+    >>> e.run_until_stopped()  # stops for above
+    5...
+
+On the other hand, if the elevator is already at, or has passed the floor in question, then the request should be treated like a request in the wrong direction. That is to say, a call is serviced later, and a floor selection is ignored.
+
+    >>> e = Elevator(ElevatorLogic())
+    1...
+    >>> e.select_floor(5)
+    >>> e.run_until_floor(2)
+    2...
+    >>> e.call(2, UP)  # missed the boat, come back later
+    >>> e.step()  # doesn't stop
+    3...
+    >>> e.select_floor(3)  # missed the boat, ignored
+    >>> e.step()  # doesn't stop
+    4...
+    >>> e.run_until_stopped()  # service e.select_floor(5)
+    5...
+    >>> e.run_until_stopped()  # service e.call(2, UP)
+    4... 3... 2...
 
