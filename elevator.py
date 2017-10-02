@@ -33,8 +33,17 @@ class ElevatorLogic(object):
         direction: the direction the caller wants to go, up or down
         """
         # Append an Object containing the request and direction
+        if floor == 1 and direction == DOWN or floor == FLOOR_COUNT and direction == UP:
+            return
+        if not self.is_valid_floor(floor):
+            return
+        if self.at_or_passed_floor(floor):
+            if self.last_direction == UP:
+                direction = DOWN
+            elif self.last_direction == DOWN:
+                direction = UP
+
         self.queue.append({ "floor": floor, "direction": direction })
-        # print(self.queue, self.last_direction)
 
     def on_floor_selected(self, floor):
         """
@@ -52,7 +61,8 @@ class ElevatorLogic(object):
         # print(self.callbacks.current_floor, self.last_direction, floor)
         if floor < self.callbacks.current_floor and self.last_direction == UP or \
         floor > self.callbacks.current_floor and self.last_direction == DOWN or \
-        floor == self.callbacks.current_floor:
+        floor == self.callbacks.current_floor or \
+        not self.is_valid_floor(floor):
              return
             
         self.queue.insert(0,{ "floor": floor, "direction": 0 })
@@ -63,6 +73,7 @@ class ElevatorLogic(object):
         This lets you know that the elevator has moved one floor up or down.
         You should decide whether or not you want to stop the elevator.
         """
+
         current_floor = self.callbacks.current_floor
         current_direction = self.callbacks.motor_direction
         for request in self.queue:
@@ -85,6 +96,8 @@ class ElevatorLogic(object):
         if len(self.queue) == 0:
             self.last_direction = None
             return
+        
+        # print(self.queue)
 
         destination = self.queue[0]
         if destination["floor"] > self.callbacks.current_floor:
@@ -95,12 +108,8 @@ class ElevatorLogic(object):
             self.last_direction = DOWN
         else:
             # Inverse direction
-            if self.last_direction == UP:
-                self.last_direction = DOWN
-            elif self.last_direction == DOWN:
-                self.last_direction = UP
-            else:
-                self.last_direction = None
+            self.inverse_direction()
+
 
     def elevator_should_stop(self, request):
         requested_floor = request["floor"]
@@ -123,3 +132,24 @@ class ElevatorLogic(object):
         if len(self.queue) == 1:
             return True
         return False
+    
+    def is_valid_floor(self, floor):
+        if(floor >= 1 or floor <= FLOOR_COUNT):
+            return True
+        return False
+
+    def inverse_direction(self):
+        if self.last_direction == UP:
+            self.last_direction = DOWN
+        elif self.last_direction == DOWN:
+            self.last_direction = UP
+        else:
+            self.last_direction = None
+
+    def at_or_passed_floor(self, floor):
+        if self.last_direction == UP:
+            return floor <= self.callbacks.current_floor
+        elif self.last_direction == DOWN:
+            return floor >= self.callbacks.current_floor
+        else:
+            return floor == self.callbacks.current_floor
