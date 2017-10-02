@@ -55,14 +55,15 @@ class ElevatorLogic(object):
         # compare next request on the queue with the requested and determine if it should be ignored
         
         # Ignore all request in opposite direction
+        # print(self.queue, self.last_direction)
         if floor < self.callbacks.current_floor and self.last_direction == UP or \
         floor > self.callbacks.current_floor and self.last_direction == DOWN:
             return
 
         # If Floor is already requested
-        for request in self.queue:
-            if floor == request["floor"]:
-                return
+        has_request = filter(lambda request: request["floor"] == floor, self.queue)
+        if len(has_request) > 0:
+            return
 
         if floor > self.callbacks.current_floor:
             self.last_direction = UP
@@ -70,6 +71,8 @@ class ElevatorLogic(object):
             self.last_direction = DOWN
         else:
             return
+        
+        # print(floor)
             
         self.queue.insert(0,{ "floor": floor, "direction": 0 })
         # print(self.queue, self.last_direction)
@@ -79,7 +82,6 @@ class ElevatorLogic(object):
         This lets you know that the elevator has moved one floor up or down.
         You should decide whether or not you want to stop the elevator.
         """
-
         current_floor = self.callbacks.current_floor
         for request in self.queue:
             if request["floor"] == current_floor:
@@ -100,10 +102,9 @@ class ElevatorLogic(object):
         if len(self.queue) == 0:
             self.last_direction = None
             return
-        
-        # print(self.queue)
 
         destination = self.queue[0]
+
         if destination["floor"] > self.callbacks.current_floor:
             self.callbacks.motor_direction = UP
             self.last_direction = UP
@@ -113,6 +114,7 @@ class ElevatorLogic(object):
         else:
             # Inverse direction
             self.inverse_direction()
+            self.queue = filter(lambda request: request["floor"] != self.callbacks.current_floor, self.queue)
 
 
     def elevator_should_stop(self, request):
@@ -151,5 +153,3 @@ class ElevatorLogic(object):
             self.last_direction = DOWN
         elif self.last_direction == DOWN:
             self.last_direction = UP
-        else:
-            self.last_direction = None
