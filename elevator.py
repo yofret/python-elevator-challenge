@@ -37,11 +37,6 @@ class ElevatorLogic(object):
             return
         if not self.is_valid_floor(floor):
             return
-        if self.at_or_passed_floor(floor):
-            if self.last_direction == UP:
-                direction = DOWN
-            elif self.last_direction == DOWN:
-                direction = UP
 
         self.queue.append({ "floor": floor, "direction": direction })
 
@@ -58,12 +53,23 @@ class ElevatorLogic(object):
         # compare next request on the queue with the requested and determine if it should be ignored
         
         # Ignore all request in opposite direction
-        # print(self.callbacks.current_floor, self.last_direction, floor)
         if floor < self.callbacks.current_floor and self.last_direction == UP or \
         floor > self.callbacks.current_floor and self.last_direction == DOWN or \
         floor == self.callbacks.current_floor or \
         not self.is_valid_floor(floor):
-             return
+            return
+
+        if floor > self.callbacks.current_floor:
+            self.last_direction = UP
+        elif floor < self.callbacks.current_floor:
+            self.last_direction = DOWN
+        else:
+            return
+
+        # If Floor is already requested
+        for request in self.queue:
+            if floor == request["floor"]:
+                return
             
         self.queue.insert(0,{ "floor": floor, "direction": 0 })
         # print(self.queue, self.last_direction)
@@ -75,16 +81,16 @@ class ElevatorLogic(object):
         """
 
         current_floor = self.callbacks.current_floor
-        current_direction = self.callbacks.motor_direction
         for request in self.queue:
-            should_stop = self.elevator_should_stop(request)
-            # print(should_stop, request)
-            if should_stop:
-                self.queue.remove(request)
-                self.callbacks.motor_direction = None
-                # If there is no more floors put direction to none
-                if len(self.queue) == 0:
-                    self.last_direction = None
+            if request["floor"] == current_floor:
+                should_stop = self.elevator_should_stop(request)
+                # print(should_stop, request)
+                if should_stop:
+                    self.queue.remove(request)
+                    self.callbacks.motor_direction = None
+                    # If there is no more floors put direction to none
+                    if len(self.queue) == 0:
+                        self.last_direction = None
 
     def on_ready(self):
         """
@@ -112,21 +118,25 @@ class ElevatorLogic(object):
 
 
     def elevator_should_stop(self, request):
-        requested_floor = request["floor"]
         requested_direction = request["direction"]
 
-        destination_reached = requested_floor == self.callbacks.current_floor
         is_same_direction = requested_direction == self.callbacks.motor_direction
         is_stop_request = requested_direction == 0
-        is_edge = self.is_edge_floor();
-        isLastRequest = self.last_request()
+        has_further_request = self.has_further_request()
 
-        return destination_reached and ((is_same_direction or is_stop_request or isLastRequest) or self.is_edge_floor())
+        return is_same_direction or is_stop_request or not has_further_request
 
-    def is_edge_floor(self):
-        if self.callbacks.current_floor == FLOOR_COUNT or self.callbacks.current_floor == 1:
-            return True
-        return False
+    def has_further_request(self):
+        if self.last_direction == UP:
+            for request in self.queue:
+                if request["floor"] > self.callbacks.current_floor:
+                    return True
+            return False
+        elif self.last_direction == DOWN:
+            for request in self.queue:
+                if request["floor"] < self.callbacks.current_floor:
+                    return True
+            return False
     
     def last_request(self):
         if len(self.queue) == 1:
@@ -145,11 +155,3 @@ class ElevatorLogic(object):
             self.last_direction = UP
         else:
             self.last_direction = None
-
-    def at_or_passed_floor(self, floor):
-        if self.last_direction == UP:
-            return floor <= self.callbacks.current_floor
-        elif self.last_direction == DOWN:
-            return floor >= self.callbacks.current_floor
-        else:
-            return floor == self.callbacks.current_floor
