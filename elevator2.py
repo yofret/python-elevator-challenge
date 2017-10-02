@@ -34,14 +34,11 @@ class ElevatorLogic(object):
         # Append an Object containing the request and direction
         if floor == self.callbacks.current_floor and self.callbacks.motor_direction == None:
             return
-        # OK
 
-        if self.floor_incoming(floor): #OK
+        if self.floor_is_upcoming(floor):
             self.queue.insert(0, { "floor": floor, "direction": direction })
         else:
             self.queue.append({ "floor": floor, "direction": direction })
-
-        # OK
 
     def on_floor_selected(self, floor):
         """
@@ -51,9 +48,14 @@ class ElevatorLogic(object):
 
         floor: the floor that was requested
         """
-        # Check if oppsite
+        
+        # Append an Object containing the request and direction will be nothing
+        # compare next request on the queue with the requested and determine if it should be ignored        
+        # Ignore all request in opposite direction
         has_request = filter(lambda request: request["floor"] == floor, self.queue)
-        if self.is_counter(floor) or len(has_request) > 0:
+        if floor < self.callbacks.current_floor and self.last_direction == UP or \
+        floor > self.callbacks.current_floor and self.last_direction == DOWN or \
+            len(has_request) > 0:
             return
 
         if floor > self.callbacks.current_floor:
@@ -64,12 +66,6 @@ class ElevatorLogic(object):
             return
             
         self.queue.insert(0,{ "floor": floor, "direction": 0 })
-
-    def is_counter(self, floor):
-        if self.last_direction == UP:
-            return floor < self.callbacks.current_floor
-        elif self.last_direction == DOWN:
-            return floor > self.callbacks.current_floor
 
     def on_floor_changed(self):
         """
@@ -123,23 +119,29 @@ class ElevatorLogic(object):
     
     def is_valid_stop(self, request):
         requested_direction = request["direction"]
-        is_current_floor = request["floor"] == self.callbacks.current_floor
+
         is_same_direction = requested_direction == self.callbacks.motor_direction
         is_stop_request = requested_direction == 0
+        # has_further_request = self.has_further_request()
 
-        return is_current_floor and (is_same_direction or is_stop_request)
+        return is_same_direction or is_stop_request
 
     def has_further_request(self):
         for request in self.queue:
-            if self.is_valid_stop(request) or self.floor_incoming(request["floor"]):
+            if self.is_valid_stop(request) or self.floor_is_upcoming(request["floor"]):
                 return True
         return False
     
-    def floor_incoming(self, floor):
+    def floor_is_upcoming(self, floor):
         if self.last_direction == UP:
             return floor > self.callbacks.current_floor
         elif self.last_direction == DOWN:
             return floor < self.callbacks.current_floor
+
+    def is_edge_floor(self, floor):
+        if floor == 1 or floor == FLOOR_COUNT:
+            return True
+        return False 
 
     def inverse_direction(self):
         if self.last_direction == UP:
