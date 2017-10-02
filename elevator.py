@@ -66,8 +66,8 @@ class ElevatorLogic(object):
         current_floor = self.callbacks.current_floor
         current_direction = self.callbacks.motor_direction
         for request in self.queue:
-            # if request["floor"] == current_floor:
             should_stop = self.elevator_should_stop(request)
+            # print(should_stop, request)
             if should_stop:
                 self.queue.remove(request)
                 self.callbacks.motor_direction = None
@@ -110,9 +110,16 @@ class ElevatorLogic(object):
         is_same_direction = requested_direction == self.callbacks.motor_direction
         is_stop_request = requested_direction == 0
         is_edge = self.is_edge_floor();
+        isLastRequest = self.last_request()
 
-        return destination_reached and ((is_same_direction or is_stop_request) or self.is_edge_floor())
+        return destination_reached and ((is_same_direction or is_stop_request or isLastRequest) or self.is_edge_floor())
 
     def is_edge_floor(self):
         if self.callbacks.current_floor == FLOOR_COUNT or self.callbacks.current_floor == 1:
             return True
+        return False
+    
+    def last_request(self):
+        if len(self.queue) == 1:
+            return True
+        return False
