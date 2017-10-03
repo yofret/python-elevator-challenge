@@ -34,14 +34,11 @@ class ElevatorLogic(object):
         # Append an Object containing the request and direction
         if floor == self.callbacks.current_floor and self.callbacks.motor_direction == None:
             return
-        # OK
 
-        if self.floor_incoming(floor): #OK
+        if self.floor_incoming(floor):
             self.queue.insert(0, { "floor": floor, "direction": direction })
         else:
             self.queue.append({ "floor": floor, "direction": direction })
-
-        # OK
 
     def on_floor_selected(self, floor):
         """
@@ -77,8 +74,6 @@ class ElevatorLogic(object):
         You should decide whether or not you want to stop the elevator.
         """
         current_floor = self.callbacks.current_floor
-
-        # print(current_floor, self.callbacks.motor_direction)
         loop_queue = filter(lambda request: request["floor"] == current_floor, self.queue)
         completed = []
 
@@ -114,8 +109,9 @@ class ElevatorLogic(object):
             self.callbacks.motor_direction = DOWN
             self.last_direction = DOWN
         else:
-            # Inverse direction
+            # Changing direction if we are in the same floor
             self.last_direction = self.inverse_direction()
+            # Also clear all request in the current floor
             self.queue = filter(lambda request: request["floor"] != self.callbacks.current_floor, self.queue)
 
     def elevator_should_stop(self, request):
@@ -127,9 +123,13 @@ class ElevatorLogic(object):
         is_same_direction = requested_direction == self.callbacks.motor_direction
         is_stop_request = requested_direction == 0
 
+        # Validate if it should stop at Floor
+        # If destination reached and
+        # Is Same direction or Is Stop request
         return is_current_floor and (is_same_direction or is_stop_request)
 
     def has_further_request(self):
+        # Chekc if it has further request in the current motor direction
         for request in self.queue:
             if self.is_valid_stop(request) or self.floor_incoming(request["floor"]):
                 return True
